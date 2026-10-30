@@ -3599,7 +3599,6 @@ dependencies = [
  "strip-ansi-escapes",
  "tempfile",
  "testcontainers",
- "testcontainers-modules",
  "throbber-widgets-tui",
  "tokio",
  "tokio-stream",
@@ -4101,15 +4100,6 @@ dependencies = [
  "tokio-tar",
  "tokio-util",
  "url",
-]
-
-[[package]]
-name = "testcontainers-modules"
-version = "0.11.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d43ed4e8f58424c3a2c6c56dbea6643c3c23e8666a34df13c54f0a184e6c707"
-dependencies = [
- "testcontainers",
 ]
 
 [[package]]

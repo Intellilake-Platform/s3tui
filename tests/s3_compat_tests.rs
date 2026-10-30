@@ -13,9 +13,9 @@ use s3tui::services::s3_data_fetcher::S3DataFetcher;
 use s3tui::settings::file_credentials::FileCredential;
 use std::io::Write;
 use tempfile::NamedTempFile;
+use testcontainers::core::{IntoContainerPort, WaitFor};
 use testcontainers::runners::AsyncRunner;
-use testcontainers::ContainerAsync;
-use testcontainers_modules::minio::MinIO;
+use testcontainers::{ContainerAsync, GenericImage, ImageExt};
 use tokio::sync::mpsc;
 
 /// Default MinIO minio
@@ -36,8 +36,15 @@ fn create_minio_credential(port: u16) -> FileCredential {
 }
 
 /// Start a MinIO container and return it along with configured minio
-async fn setup_minio() -> (ContainerAsync<MinIO>, FileCredential) {
-    let container = MinIO::default()
+async fn setup_minio() -> (ContainerAsync<GenericImage>, FileCredential) {
+    // Docker Hub no longer serves minio/minio; this build logs to stderr
+    let container = GenericImage::new(
+        "cgr.dev/chainguard/minio",
+        "latest@sha256:3b6e40c30ecd5cea627e382ff0b82ca841f58c52294578787043ee80c8ef7c82",
+    )
+    .with_exposed_port(9000.tcp())
+    .with_wait_for(WaitFor::message_on_stderr("API:"))
+    .with_cmd(["server", "/data"])
         .start()
         .await
         .expect("Failed to start MinIO container");
