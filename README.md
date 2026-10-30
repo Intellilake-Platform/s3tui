@@ -100,6 +100,17 @@ default_region=eu-west-1
 ```
 Make sure there is a new line at the end and there are no leading spaces on the lines.
 
+For temporary credentials (STS, SSO, `aws login`), add the session token as well. Temporary credentials expire, so replace the file's values when they do:
+
+```
+access_key=ASIA...
+secret_key=YOUR_SECRET_KEY
+session_token=YOUR_SESSION_TOKEN
+default_region=eu-west-1
+```
+
+`aws configure export-credentials --profile <name> --format env` prints all three values for an AWS CLI profile.
+
 ### S3-Compatible Storage
 
 s3tui supports S3-compatible storage providers. Example credential file:

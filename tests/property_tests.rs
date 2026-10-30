@@ -155,6 +155,7 @@ mod state_invariant_tests {
             name: name.to_string(),
             access_key: format!("{}_key", name),
             secret_key: format!("{}_secret", name),
+            session_token: None,
             default_region: "us-east-1".to_string(),
             selected,
             endpoint_url: None,

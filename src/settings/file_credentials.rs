@@ -11,6 +11,8 @@ pub struct FileCredential {
     pub name: String,
     pub access_key: String,
     pub secret_key: String,
+    /// Present for temporary (STS) credentials
+    pub session_token: Option<String>,
     pub default_region: String,
     pub endpoint_url: Option<String>,
     pub force_path_style: bool,
@@ -23,6 +25,7 @@ impl FileCredential {
         let reader = io::BufReader::new(file);
         let mut access_key = String::new();
         let mut secret_key = String::new();
+        let mut session_token = None;
         let mut default_region = String::new();
         let mut endpoint_url = None;
         let mut force_path_style = false;
@@ -36,6 +39,8 @@ impl FileCredential {
                 access_key = stripped.trim().to_string()
             } else if let Some(stripped) = line.strip_prefix("secret_key=") {
                 secret_key = stripped.trim().to_string()
+            } else if let Some(stripped) = line.strip_prefix("session_token=") {
+                session_token = Some(stripped.trim().to_string())
             } else if let Some(stripped) = line.strip_prefix("default_region=") {
                 default_region = stripped.trim().to_string()
             } else if let Some(stripped) = line.strip_prefix("endpoint_url=") {
@@ -56,6 +61,7 @@ impl FileCredential {
             name,
             access_key,
             secret_key,
+            session_token,
             default_region,
             endpoint_url,
             force_path_style,

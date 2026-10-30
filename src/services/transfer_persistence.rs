@@ -158,6 +158,7 @@ mod tests {
             name: "test".to_string(),
             access_key: "test_key".to_string(),
             secret_key: "test_secret".to_string(),
+            session_token: None,
             default_region: "us-east-1".to_string(),
             selected: true,
             endpoint_url: None,

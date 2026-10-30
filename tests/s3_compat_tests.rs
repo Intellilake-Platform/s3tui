@@ -10,7 +10,7 @@ use s3tui::model::local_selected_item::LocalSelectedItem;
 use s3tui::model::s3_selected_item::S3SelectedItem;
 use s3tui::model::transfer_state::TransferState;
 use s3tui::services::s3_data_fetcher::S3DataFetcher;
-use s3tui::settings::file_credentials::FileCredential;
+use s3tui::settings::file_credentials::{load_credentials, FileCredential};
 use std::io::Write;
 use tempfile::NamedTempFile;
 use testcontainers::core::{IntoContainerPort, WaitFor};
@@ -28,6 +28,7 @@ fn create_minio_credential(port: u16) -> FileCredential {
         name: "minio-test".to_string(),
         access_key: MINIO_ACCESS_KEY.to_string(),
         secret_key: MINIO_SECRET_KEY.to_string(),
+        session_token: None,
         default_region: "us-east-1".to_string(),
         selected: true,
         endpoint_url: Some(format!("http://127.0.0.1:{}", port)),
@@ -532,4 +533,104 @@ async fn test_error_recovery_download_nonexistent_object() {
     while rx.recv().await.is_some() {}
 
     assert!(result.is_err(), "Download of non-existent object should fail gracefully");
+}
+
+/// Request temporary credentials from MinIO's STS endpoint
+async fn assume_minio_role(port: u16) -> aws_sdk_sts::types::Credentials {
+    let config = aws_sdk_sts::Config::builder()
+        .behavior_version_latest()
+        .region(aws_sdk_sts::config::Region::new("us-east-1"))
+        .endpoint_url(format!("http://127.0.0.1:{}", port))
+        .credentials_provider(aws_sdk_sts::config::Credentials::new(
+            MINIO_ACCESS_KEY,
+            MINIO_SECRET_KEY,
+            None,
+            None,
+            "test",
+        ))
+        .build();
+    aws_sdk_sts::Client::from_conf(config)
+        .assume_role()
+        .role_arn("arn:aws:iam::000000000000:role/s3tui-test")
+        .role_session_name("s3tui-test")
+        .send()
+        .await
+        .expect("AssumeRole failed")
+        .credentials
+        .expect("AssumeRole returned no credentials")
+}
+
+#[tokio::test]
+#[ignore] // Requires Docker
+async fn test_temporary_credentials_from_creds_file() {
+    let (container, _) = setup_minio().await;
+    let port = container.get_host_port_ipv4(9000).await.unwrap();
+    let sts = assume_minio_role(port).await;
+
+    let mut creds_file = NamedTempFile::new().unwrap();
+    write!(
+        creds_file,
+        "access_key={}\nsecret_key={}\nsession_token={}\ndefault_region=us-east-1\nendpoint_url=http://127.0.0.1:{}\nforce_path_style=true\n",
+        sts.access_key_id(),
+        sts.secret_access_key(),
+        sts.session_token(),
+        port
+    )
+    .unwrap();
+    let creds = load_credentials(Some(creds_file.path().to_path_buf())).unwrap().remove(0);
+    let fetcher = S3DataFetcher::new(creds.clone());
+
+    let bucket_name = "temp-creds-bucket";
+    let created = fetcher
+        .create_bucket(bucket_name.to_string(), "us-east-1".to_string())
+        .await
+        .unwrap();
+    assert_eq!(created, None);
+
+    let test_file = create_test_file(b"temporary");
+    let (tx, mut rx) = mpsc::channel(100);
+    let upload_item = LocalSelectedItem {
+        name: "temp.txt".to_string(),
+        path: test_file.path().to_str().unwrap().to_string(),
+        is_directory: false,
+        destination_bucket: bucket_name.to_string(),
+        destination_path: "temp.txt".to_string(),
+        s3_creds: creds.clone(),
+        children: None,
+        transfer_state: TransferState::Pending,
+        job_id: None,
+    };
+    fetcher.upload_item(upload_item, tx, None).await.expect("Upload failed");
+    rx.close();
+    while rx.recv().await.is_some() {}
+
+    let objects = fetcher
+        .list_current_location(Some(bucket_name.to_string()), None)
+        .await
+        .expect("Failed to list objects");
+    assert_eq!(objects.len(), 1);
+
+    let object_delete = fetcher
+        .delete_data(false, Some(bucket_name.to_string()), "temp.txt".to_string(), false)
+        .await
+        .expect("Delete failed");
+    assert_eq!(object_delete, None);
+    let bucket_delete = fetcher
+        .delete_data(true, None, bucket_name.to_string(), false)
+        .await
+        .expect("Delete failed");
+    assert_eq!(bucket_delete, None);
+
+    let without_token = S3DataFetcher::new(FileCredential {
+        session_token: None,
+        ..creds
+    });
+    let rejected = without_token
+        .create_bucket("no-token-bucket".to_string(), "us-east-1".to_string())
+        .await
+        .unwrap();
+    assert!(
+        rejected.is_some(),
+        "Temporary keys without their session token should be rejected"
+    );
 }

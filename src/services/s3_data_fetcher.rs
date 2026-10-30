@@ -348,13 +348,14 @@ impl S3DataFetcher {
     pub fn new(creds: FileCredential) -> Self {
         let access_key = creds.access_key.clone();
         let secret_access_key = creds.secret_key.clone();
+        let session_token = creds.session_token.clone();
         let default_region = creds.default_region.clone();
         let endpoint_url = creds.endpoint_url.clone();
         let force_path_style = creds.force_path_style;
         let credentials = Credentials::new(
             access_key,
             secret_access_key,
-            None,     // Token, if using temporary minio (like STS)
+            session_token,
             None,     // Expiry time, if applicable
             "manual", // Source, just a label for debugging
         );
@@ -1049,6 +1050,7 @@ impl S3DataFetcher {
                 name: "temp".to_string(),
                 access_key: creds.access_key_id().to_string(),
                 secret_key: creds.secret_access_key().to_string(),
+                session_token: creds.session_token().map(String::from),
                 default_region: location.clone(),
                 selected: false,
                 endpoint_url,
@@ -1091,6 +1093,7 @@ impl S3DataFetcher {
             name: "temp".to_string(),
             access_key: creds.access_key_id().to_string(),
             secret_key: creds.secret_access_key().to_string(),
+            session_token: creds.session_token().map(String::from),
             default_region: location.clone(),
             endpoint_url: self.endpoint_url.clone(),
             force_path_style: self.force_path_style,
@@ -1156,6 +1159,7 @@ impl S3DataFetcher {
                 name: "temp".to_string(),
                 access_key: creds.access_key_id().to_string(),
                 secret_key: creds.secret_access_key().to_string(),
+                session_token: creds.session_token().map(String::from),
                 default_region: location.clone(),
                 endpoint_url: self.endpoint_url.clone(),
                 force_path_style: self.force_path_style,
@@ -1275,6 +1279,7 @@ impl S3DataFetcher {
                 name: "temp".to_string(),
                 access_key: creds.access_key_id().to_string(),
                 secret_key: creds.secret_access_key().to_string(),
+                session_token: creds.session_token().map(String::from),
                 default_region: location.to_string(),
                 endpoint_url: self.endpoint_url.clone(),
                 force_path_style: self.force_path_style,
@@ -1345,13 +1350,14 @@ impl S3DataFetcher {
         if let Some(crd) = creds {
             let access_key = crd.access_key;
             let secret_access_key = crd.secret_key;
+            let session_token = crd.session_token;
             region = crd.default_region;
             endpoint_url = crd.endpoint_url;
             force_path_style = crd.force_path_style;
             credentials = Credentials::new(
                 access_key,
                 secret_access_key,
-                None,     // Token, if using temporary minio (like STS)
+                session_token,
                 None,     // Expiry time, if applicable
                 "manual", // Source, just a label for debugging
             );
