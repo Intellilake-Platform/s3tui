@@ -503,6 +503,7 @@ impl StateStore {
         self.transfer_state_store = transfer_state_store.clone();
 
         let mut state = State::new(creds.clone());
+        state.current_s3_bucket = bucket.clone();
         let s3_data_fetcher = Self::get_current_s3_fetcher(&state, &transfer_state_store);
         state.set_s3_loading(true);
         state.set_current_local_path(

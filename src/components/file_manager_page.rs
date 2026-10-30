@@ -1029,7 +1029,7 @@ impl Component for FileManagerPage {
             show_quit_confirmation: false,
             show_shortcuts_overlay: false,
             s3_panel_selected: true,
-            default_navigation_state: NavigationState::new(None, None),
+            default_navigation_state: NavigationState::new(state.current_s3_bucket.clone(), None),
             input: Input::default().with_value(String::from("")),
             search_input: Input::default().with_value(String::from("")),
         }
@@ -1499,5 +1499,49 @@ mod tests {
             !page.s3_panel_selected,
             "Local panel should be selected after tab"
         );
+    }
+
+    #[tokio::test]
+    async fn test_start_bucket_navigation() {
+        use crate::model::s3_data_item::{BucketInfo, FileInfo, S3DataItem};
+
+        let press = |code| KeyEvent {
+            code,
+            kind: KeyEventKind::Press,
+            modifiers: KeyModifiers::NONE,
+            state: KeyEventState::NONE,
+        };
+        let (tx, mut rx) = mpsc::unbounded_channel();
+        let mut state = State::default();
+        state.current_s3_bucket = Some("start-bucket".to_string());
+        state.s3_data = vec![S3DataItem::init(
+            BucketInfo {
+                bucket: Some("start-bucket".to_string()),
+                region: None,
+                is_bucket: false,
+            },
+            FileInfo {
+                file_name: "dir".to_string(),
+                size: String::new(),
+                file_type: "Dir".to_string(),
+                path: "dir/".to_string(),
+                is_directory: true,
+            },
+        )];
+        let mut page = FileManagerPage::new(&state, tx);
+
+        page.handle_key_event(press(KeyCode::Down));
+        page.handle_key_event(press(KeyCode::Enter));
+        page.handle_key_event(press(KeyCode::Esc));
+        page.handle_key_event(press(KeyCode::Esc));
+
+        let fetches: Vec<Action> = std::iter::from_fn(|| rx.try_recv().ok())
+            .filter(|action| matches!(action, Action::FetchS3Data { .. }))
+            .collect();
+        let fetch = |prefix: Option<&str>| Action::FetchS3Data {
+            bucket: Some("start-bucket".to_string()),
+            prefix: prefix.map(String::from),
+        };
+        assert_eq!(fetches, vec![fetch(Some("dir/")), fetch(None), fetch(None)]);
     }
 }
