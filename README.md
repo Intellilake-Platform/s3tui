@@ -75,6 +75,7 @@ productivity with S3 services.
   the XDG Base Directory Specification.
 - **Error Handling**: Integrated `color_eyre` panic hook for clear and colorized error reporting.
 - **Custom Credentials Path**: Specify a custom credentials file path with the `--creds-file` flag, overriding the default `creds` directory lookup.
+- **Start in a Bucket**: Open one bucket directly with the `--bucket` flag, for credentials that can read a bucket but not list the account's buckets.
 - **Version Information**: Quickly view the application version with the `--version` command.
 
 ## Setup
@@ -159,6 +160,10 @@ The `force_path_style` parameter controls URL formatting:
 - You can also specify a custom credentials file path using the `--creds-file` flag:
 ```bash
 s3tui --creds-file /path/to/credentials
+```
+- Open a bucket directly with the `--bucket` flag. The bucket list stays out of the way, so credentials without `s3:ListAllMyBuckets` work:
+```bash
+s3tui --bucket my-bucket
 ```
 
 ## Logs

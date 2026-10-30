@@ -9,4 +9,7 @@ pub struct Cli {
     /// Path to the credentials file
     #[arg(long)]
     pub creds_file: Option<PathBuf>,
+    /// Open this bucket instead of the bucket list
+    #[arg(long)]
+    pub bucket: Option<String>,
 }

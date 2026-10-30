@@ -474,6 +474,7 @@ impl StateStore {
         mut action_rx: UnboundedReceiver<Action>,
         mut interrupt_rx: broadcast::Receiver<Interrupted>,
         creds: Vec<FileCredential>,
+        bucket: Option<String>,
     ) -> eyre::Result<Interrupted> {
         let local_data_fetcher = LocalDataFetcher::new();
         let transfer_manager = Arc::new(TransferManager::new(S3_OPERATIONS_CONCURRENCY_LEVEL));
@@ -552,7 +553,7 @@ impl StateStore {
         )
         .await;
 
-        self.fetch_s3_data(None, None, s3_data_fetcher.clone(), s3_tx.clone())
+        self.fetch_s3_data(bucket, None, s3_data_fetcher.clone(), s3_tx.clone())
             .await;
         self.fetch_local_data(
             Some(

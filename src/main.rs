@@ -41,7 +41,7 @@ async fn main() -> eyre::Result<()> {
     if let Ok(creds) = file_credentials::load_credentials(args.creds_file) {
         if !creds.is_empty() {
             tokio::try_join!(
-                state_store.main_loop(terminator, action_rx, interrupt_rx.resubscribe(), creds),
+                state_store.main_loop(terminator, action_rx, interrupt_rx.resubscribe(), creds, args.bucket),
                 ui_manager.main_loop(state_rx, interrupt_rx.resubscribe()),
             )?;
         } else {
